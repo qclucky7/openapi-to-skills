@@ -178,6 +178,10 @@ describe("TemplateRenderer template fallback", () => {
 	});
 });
 
+// =============================================================================
+// TemplateRenderer - authentication
+// =============================================================================
+
 describe("TemplateRenderer - authentication", () => {
 	test("renders apiKey header name when present", () => {
 		const renderer = createRenderer();

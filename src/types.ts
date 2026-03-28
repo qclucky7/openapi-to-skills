@@ -141,6 +141,7 @@ export interface OAuthFlowDocument {
 // =============================================================================
 
 export type GroupByStrategy = "tags" | "path" | "auto";
+export type CaseStrategy = "lowercase";
 
 export interface ParserOptions {
 	/** Skill name override */
@@ -204,6 +205,12 @@ export interface ConvertOptions {
 	renderer?: Renderer;
 	/** Custom writer (optional) */
 	writer?: Writer;
+	/**
+	 * Strategy for handling case-insensitive filesystem collisions:
+	 * - 'lowercase': Lowercase all output paths, disambiguate collisions with numeric suffixes
+	 * - undefined: No transformation (default, preserves original casing)
+	 */
+	caseStrategy?: CaseStrategy;
 }
 
 // =============================================================================

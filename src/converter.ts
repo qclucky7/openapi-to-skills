@@ -6,6 +6,7 @@ import type {
 	ConvertOptions,
 	OpenAPISpec,
 	Renderer,
+	SchemaGroupDocument,
 	SkillDocument,
 	Writer,
 } from "./types.js";
@@ -23,10 +24,61 @@ export async function convertOpenAPIToSkill(
 	const writer = options.writer ?? createWriter();
 
 	// Parse OpenAPI to IR
-	const doc = parser.parse(spec, options.parser);
+	let doc = parser.parse(spec, options.parser);
+
+	// Apply case strategy to IR before rendering
+	if (options.caseStrategy === "lowercase") {
+		doc = applyCaseStrategyLowercase(doc);
+	}
 
 	// Write output
 	await writeSkillOutput(doc, options.outputDir, renderer, writer);
+}
+
+/**
+ * Transform IR for lowercase case strategy:
+ * 1. Merge schema groups whose prefixes differ only in case
+ * 2. Lowercase all group prefixes and schema names
+ * 3. Disambiguate colliding names with numeric suffixes
+ */
+function applyCaseStrategyLowercase(doc: SkillDocument): SkillDocument {
+	// Merge groups by case-insensitive prefix
+	const mergedMap = new Map<string, SchemaGroupDocument>();
+
+	for (const group of doc.schemaGroups) {
+		const key = group.prefix.toLowerCase();
+
+		const existing = mergedMap.get(key);
+		if (existing) {
+			existing.schemas.push(...group.schemas);
+		} else {
+			mergedMap.set(key, { prefix: key, schemas: [...group.schemas] });
+		}
+	}
+
+	// Disambiguate schema names within each group
+	const newGroups: SchemaGroupDocument[] = [];
+
+	for (const group of mergedMap.values()) {
+		const usedNames = new Set<string>();
+		const renamedSchemas = group.schemas.map((schema) => {
+			const baseName = toFileName(schema.name).toLowerCase();
+			let finalName = baseName;
+			let counter = 2;
+
+			while (usedNames.has(finalName)) {
+				finalName = `${baseName}-${counter}`;
+				counter++;
+			}
+
+			usedNames.add(finalName);
+			return { ...schema, name: finalName };
+		});
+
+		newGroups.push({ prefix: group.prefix, schemas: renamedSchemas });
+	}
+
+	return { ...doc, schemaGroups: newGroups };
 }
 
 /**

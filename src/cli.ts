@@ -7,7 +7,8 @@ import { consola } from "consola";
 import { convertOpenAPIToSkill } from "./converter.js";
 import { toFileName } from "./renderer.js";
 import { loadSpecFromInput } from "./spec-loader.js";
-import type { GroupByStrategy, OpenAPISpec } from "./types.js";
+import type { OpenAPISpec } from "./types.js";
+import { validateArgs } from "./validate.js";
 
 const main = defineCommand({
 	meta: {
@@ -61,6 +62,11 @@ const main = defineCommand({
 				"How to group operations: 'tags' (use OpenAPI tags), 'path' (use first path segment), 'auto' (tags if available, else path)",
 			default: "auto",
 		},
+		caseStrategy: {
+			type: "string",
+			description:
+				"Strategy for case-insensitive filesystem safety: 'lowercase' (lowercase all paths, disambiguate collisions)",
+		},
 		force: {
 			type: "boolean",
 			alias: "f",
@@ -86,19 +92,15 @@ const main = defineCommand({
 
 		const spec: OpenAPISpec = await loadSpecFromInput(inputFile);
 
-		// Validate basic structure
-		if (!spec.openapi) {
-			consola.error('Invalid OpenAPI spec: missing "openapi" field');
+		// Validate spec and options
+		let validated: ReturnType<typeof validateArgs>;
+		try {
+			validated = validateArgs({ spec, ...args });
+		} catch (err) {
+			consola.error((err as Error).message);
 			process.exit(1);
 		}
-		if (!spec.info?.title) {
-			consola.error('Invalid OpenAPI spec: missing "info.title" field');
-			process.exit(1);
-		}
-		if (!spec.paths) {
-			consola.error('Invalid OpenAPI spec: missing "paths" field');
-			process.exit(1);
-		}
+		const { groupBy, caseStrategy } = validated;
 
 		// Derive skill name for output path check
 		const skillName = args.name ?? toFileName(spec.info.title).toLowerCase();
@@ -126,18 +128,10 @@ const main = defineCommand({
 
 		consola.start("Converting to Agent Skill...");
 
-		// Validate groupBy option
-		const groupBy = args.groupBy as GroupByStrategy;
-		if (!["tags", "path", "auto"].includes(groupBy)) {
-			consola.error(
-				`Invalid --group-by value: ${groupBy}. Must be 'tags', 'path', or 'auto'.`,
-			);
-			process.exit(1);
-		}
-
 		await convertOpenAPIToSkill(spec, {
 			outputDir: args.output,
 			templateDir: args.templates,
+			caseStrategy,
 			parser: {
 				skillName: args.name,
 				groupBy,

@@ -39,9 +39,22 @@ npx openapi-to-skills https://example.com/openapi.yaml -o ./output
 | `--exclude-paths` | | Exclude paths matching prefixes (comma-separated) |
 | `--exclude-deprecated` | | Exclude deprecated operations |
 | `--group-by` | `-g` | How to group operations: `tags`, `path`, or `auto` (default: `auto`) |
+| `--case-strategy` | | Strategy for case-insensitive filesystem safety: `lowercase` |
 | `--templates` | `-t` | Custom templates directory |
 | `--force` | `-f` | Overwrite existing output directory |
 | `--quiet` | `-q` | Suppress output except errors |
+
+### Case-Insensitive Filesystem Safety
+
+Some OpenAPI specs define schemas whose names differ only in letter casing (e.g., `alert` and `Alert`). This produces output directories that collide on case-insensitive filesystems (macOS, Windows), causing one to silently overwrite the other.
+
+Use `--case-strategy lowercase` to avoid this:
+
+```bash
+npx openapi-to-skills ./openapi.yaml -o ./output --case-strategy lowercase
+```
+
+This lowercases all schema output paths and disambiguates collisions with numeric suffixes (e.g., `alert.md` and `alert-2.md`). Without this option, the original casing is preserved (default behavior, no breaking change).
 
 ### Output Structure
 

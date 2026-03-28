@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -44,7 +45,20 @@ async function readDirRecursive(dir: string): Promise<Map<string, string>> {
 
 async function getInputSpecs(): Promise<string[]> {
 	const files = await readdir(INPUT_DIR);
-	return files.filter((f) => f.endsWith(".yaml") || f.endsWith(".json"));
+	return files.filter(
+		(f) =>
+			(f.endsWith(".yaml") || f.endsWith(".json")) && !f.endsWith(".args.json"),
+	);
+}
+
+async function getExtraArgs(spec: string): Promise<string[]> {
+	const baseName = spec.replace(/\.(yaml|yml|json)$/, "");
+	const argsFile = join(INPUT_DIR, `${baseName}.args.json`);
+	if (existsSync(argsFile)) {
+		const content = await readFile(argsFile, "utf-8");
+		return JSON.parse(content);
+	}
+	return [];
 }
 
 async function getExpectedOutputDir(inputFile: string): Promise<string | null> {
@@ -92,9 +106,10 @@ describe("e2e snapshot tests", async () => {
 			beforeAll(async () => {
 				const inputPath = join(INPUT_DIR, spec);
 				const outputDir = join(tempDir, spec);
+				const extraArgs = await getExtraArgs(spec);
 
 				// Run CLI
-				const result = await runCLI(inputPath, "-o", outputDir);
+				const result = await runCLI(inputPath, "-o", outputDir, ...extraArgs);
 				if (result.exitCode !== 0) {
 					throw new Error(`CLI failed: ${result.stderr}`);
 				}

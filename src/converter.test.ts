@@ -170,6 +170,138 @@ describe("convertOpenAPIToSkill - file writing", () => {
 });
 
 // =============================================================================
+// Case Strategy
+// =============================================================================
+
+describe("convertOpenAPIToSkill - caseStrategy: lowercase", () => {
+	const specWithCaseConflict: OpenAPISpec = {
+		...createMinimalSpec(),
+		components: {
+			schemas: {
+				alert: { type: "object", properties: { labels: { type: "object" } } },
+				Alert: {
+					type: "object",
+					properties: { state: { type: "string" } },
+				},
+				AlertGroup: {
+					type: "object",
+					properties: {
+						alerts: {
+							type: "array",
+							items: { $ref: "#/components/schemas/Alert" },
+						},
+					},
+				},
+			},
+		},
+	};
+
+	test("lowercases schema directory names", async () => {
+		const { writer, mkdirCalls } = createMockWriter();
+
+		await convertOpenAPIToSkill(specWithCaseConflict, {
+			outputDir: "/out",
+			renderer: createMockRenderer(),
+			writer,
+			caseStrategy: "lowercase",
+		});
+
+		const schemaDirs = mkdirCalls.filter((p) => p.includes("/schemas/"));
+		// Only one directory "alert", no "Alert"
+		expect(schemaDirs).toContain("/out/test-api/references/schemas/alert");
+		expect(schemaDirs).not.toContain("/out/test-api/references/schemas/Alert");
+	});
+
+	test("lowercases schema filenames", async () => {
+		const { writer, writeFileCalls } = createMockWriter();
+
+		await convertOpenAPIToSkill(specWithCaseConflict, {
+			outputDir: "/out",
+			renderer: createMockRenderer(),
+			writer,
+			caseStrategy: "lowercase",
+		});
+
+		const schemaFiles = writeFileCalls
+			.filter((c) => c.path.includes("/schemas/"))
+			.map((c) => c.path);
+
+		// All filenames should be lowercase
+		for (const path of schemaFiles) {
+			const fileName = path.split("/").pop();
+			expect(fileName).toBe(fileName?.toLowerCase());
+		}
+	});
+
+	test("disambiguates colliding filenames with numeric suffix", async () => {
+		const { writer, writeFileCalls } = createMockWriter();
+
+		await convertOpenAPIToSkill(specWithCaseConflict, {
+			outputDir: "/out",
+			renderer: createMockRenderer(),
+			writer,
+			caseStrategy: "lowercase",
+		});
+
+		const schemaFiles = writeFileCalls
+			.filter((c) => c.path.includes("/schemas/alert/"))
+			.map((c) => c.path.split("/").pop())
+			.sort();
+
+		// "alert" and "Alert" both become "alert.md" → disambiguate
+		expect(schemaFiles).toContain("alert.md");
+		expect(schemaFiles).toContain("alert-2.md");
+		expect(schemaFiles).toContain("alertgroup.md");
+		expect(schemaFiles).toContain("_index.md");
+	});
+
+	test("disambiguates triple collision with incremental suffixes", async () => {
+		const spec: OpenAPISpec = {
+			...createMinimalSpec(),
+			components: {
+				schemas: {
+					foo: { type: "object" },
+					Foo: { type: "object" },
+					FOO: { type: "object" },
+				},
+			},
+		};
+		const { writer, writeFileCalls } = createMockWriter();
+
+		await convertOpenAPIToSkill(spec, {
+			outputDir: "/out",
+			renderer: createMockRenderer(),
+			writer,
+			caseStrategy: "lowercase",
+		});
+
+		const schemaFiles = writeFileCalls
+			.filter(
+				(c) => c.path.includes("/schemas/") && !c.path.endsWith("_index.md"),
+			)
+			.map((c) => c.path.split("/").pop())
+			.sort();
+
+		expect(schemaFiles).toEqual(["foo-2.md", "foo-3.md", "foo.md"]);
+	});
+
+	test("without caseStrategy, preserves original casing", async () => {
+		const { writer, mkdirCalls } = createMockWriter();
+
+		await convertOpenAPIToSkill(specWithCaseConflict, {
+			outputDir: "/out",
+			renderer: createMockRenderer(),
+			writer,
+		});
+
+		// Should have both Alert and alert directories
+		const schemaDirs = mkdirCalls.filter((p) => p.includes("/schemas/"));
+		expect(schemaDirs).toContain("/out/test-api/references/schemas/Alert");
+		expect(schemaDirs).toContain("/out/test-api/references/schemas/alert");
+	});
+});
+
+// =============================================================================
 // Authentication Conditional Logic
 // =============================================================================
 

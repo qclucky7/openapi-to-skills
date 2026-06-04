@@ -201,3 +201,104 @@ describe("TemplateRenderer - authentication", () => {
 		expect(result).toContain("- **Name:** x-token");
 	});
 });
+
+// =============================================================================
+// TemplateRenderer - operation inline schemas (regression: inline bodies/
+// responses were silently dropped because only schema.ref was rendered)
+// =============================================================================
+
+describe("TemplateRenderer - operation inline schemas", () => {
+	const baseOp = {
+		operationId: "mkdir",
+		path: "/api/workspaces/{id}/agent/dirs",
+		method: "POST",
+		tag: "agent-files",
+		deprecated: false,
+		parameters: [],
+		security: [],
+	};
+
+	test("renders inline object request body fields", () => {
+		const renderer = createRenderer();
+		const result = renderer.renderOperation({
+			...baseOp,
+			requestBody: {
+				required: true,
+				contentTypes: ["application/json"],
+				schema: {
+					inline: {
+						name: "(inline)",
+						type: "object",
+						fields: [
+							{
+								name: "path",
+								type: "string",
+								required: true,
+								description: "Directory path to create",
+							},
+						],
+					},
+				},
+			},
+			responses: [],
+		});
+
+		expect(result).toContain("## Request Body");
+		expect(result).toContain("**Schema** (inline):");
+		expect(result).toContain("| Field | Type | Required | Description |");
+		expect(result).toContain(
+			"| `path` | string | Yes | Directory path to create |",
+		);
+	});
+
+	test("renders inline object success response fields", () => {
+		const renderer = createRenderer();
+		const result = renderer.renderOperation({
+			...baseOp,
+			responses: [
+				{
+					status: "200",
+					description: "OK",
+					schema: {
+						inline: {
+							name: "(inline)",
+							type: "object",
+							fields: [{ name: "ok", type: "boolean", required: true }],
+						},
+					},
+				},
+			],
+		});
+
+		expect(result).toContain("**Success Response Schema** (inline):");
+		expect(result).toContain("| `ok` | boolean | Yes |  |");
+	});
+
+	test("links inline field that references a named schema", () => {
+		const renderer = createRenderer();
+		const result = renderer.renderOperation({
+			...baseOp,
+			requestBody: {
+				required: false,
+				contentTypes: ["application/json"],
+				schema: {
+					inline: {
+						name: "(inline)",
+						type: "object",
+						fields: [
+							{
+								name: "owner",
+								type: "object",
+								required: false,
+								schema: { ref: "UserRef" },
+							},
+						],
+					},
+				},
+			},
+			responses: [],
+		});
+
+		expect(result).toContain("[UserRef](../schemas/User/UserRef.md)");
+	});
+});

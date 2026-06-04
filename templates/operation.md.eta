@@ -1,3 +1,48 @@
+<%
+// Render an inline (non-$ref) schema body. The parser populates schema.inline
+// (parser.ts), but only the .ref branch was rendered before — inline object
+// bodies/responses silently vanished. Returns markdown body only; each call
+// site supplies its own heading.
+function _typeCell(field) {
+	if (field.schema?.ref) {
+		const rn = field.schema.ref.replace("[]", "");
+		const arr = field.schema.ref.endsWith("[]");
+		return `${arr ? "Array of " : ""}[${rn}](../schemas/${it.toFileName(it.extractSchemaPrefix(rn))}/${it.toFileName(rn)}.md)`;
+	}
+	return field.type;
+}
+function _fieldRows(fields) {
+	return fields
+		.map((f) => `| \`${f.name}\` | ${_typeCell(f)} | ${f.required ? "Yes" : "No"} | ${f.description ?? ""} |`)
+		.join("\n");
+}
+function renderInlineSchema(s) {
+	if (!s) return "";
+	if (s.type === "object" && s.fields && s.fields.length) {
+		let out =
+			"| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n" +
+			_fieldRows(s.fields);
+		for (const f of s.fields.filter((f) => f.nestedFields && f.nestedFields.length)) {
+			out +=
+				`\n\n**\`${f.name}\` fields:**\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n` +
+				_fieldRows(f.nestedFields);
+		}
+		return out;
+	}
+	if (s.type === "array") {
+		return s.items?.ref
+			? `Array of [${s.items.ref}](../schemas/${it.toFileName(it.extractSchemaPrefix(s.items.ref))}/${it.toFileName(s.items.ref)}.md)`
+			: "Array";
+	}
+	if (s.type === "enum" && s.enumValues) {
+		return "Enum: " + s.enumValues.map((v) => `\`${v}\``).join(", ");
+	}
+	// Fieldless objects (free-form maps) and bare primitives carry no structure
+	// the parser can render — return empty so the call site suppresses the
+	// heading rather than printing an empty section.
+	return "";
+}
+-%>
 # <%= it.method %> <%= it.path %>
 
 **Resource:** [<%= it.tag %>](../resources/<%= it.toFileName(it.tag) %>.md)
@@ -41,6 +86,14 @@
 <% const isArray = it.requestBody.schema.ref.endsWith("[]"); -%>
 **Schema:** <%= isArray ? "Array of " : "" %>[<%= refName %>](../schemas/<%= it.toFileName(prefix) %>/<%= it.toFileName(refName) %>.md)
 
+<% } else if (it.requestBody.schema?.inline) { -%>
+<% const _reqInline = renderInlineSchema(it.requestBody.schema.inline); -%>
+<% if (_reqInline) { -%>
+**Schema** (inline):
+
+<%~ _reqInline %>
+
+<% } -%>
 <% } -%>
 <% } -%>
 <% if (it.responses.length > 0) { -%>
@@ -61,6 +114,14 @@
 
 <%= isArray ? "Array of " : "" %>[<%= refName %>](../schemas/<%= it.toFileName(prefix) %>/<%= it.toFileName(refName) %>.md)
 
+<% } else if (successResponse?.schema?.inline) { -%>
+<% const _resInline = renderInlineSchema(successResponse.schema.inline); -%>
+<% if (_resInline) { -%>
+**Success Response Schema** (inline):
+
+<%~ _resInline %>
+
+<% } -%>
 <% } -%>
 <% } -%>
 <% if (it.security.length > 0) { -%>

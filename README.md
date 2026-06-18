@@ -11,6 +11,20 @@ However, feeding raw OpenAPI specs to agents has limitations. Complex specificat
 
 Agent Skills solves this by structuring documentation for on-demand reading. Agents load only what they need - starting with an overview, then drilling into specific operations or schemas. Since file reading is a universal capability across agent frameworks, this approach works everywhere without special integrations.
 
+## What's New in This Fork
+
+Since forking from upstream, the following features have been added, modified, or removed:
+
+### Added
+
+- **Inline request/response schema rendering** — Operations with inline (non-`$ref`) request bodies and responses now render as full field tables. Previously, inline objects were silently dropped — only `$ref`-based schemas appeared in output.
+- **Nested `allOf` object display** — Fields using `allOf` schema composition resolve `$ref` sub-schemas inline, showing child fields directly in the parent schema table.
+- **Auto-generated schema examples** — Schema and operation documents now include example JSON generated from `example` / `examples` fields in the spec.
+
+### Removed
+
+- **Description truncation** — API description no longer truncated to 200 characters; resource descriptions no longer truncated to 50 characters.
+
 ## Features
 
 - **Semantic structure** - Output organized by resources, operations, and schemas, enabling agents to load only relevant sections
@@ -30,19 +44,19 @@ npx openapi-to-skills https://example.com/openapi.yaml -o ./output
 
 ### Options
 
-| Option | Alias | Description |
-|--------|-------|-------------|
-| `--output` | `-o` | Output directory (default: `./output`) |
-| `--name` | `-n` | Skill name (default: derived from API title) |
-| `--include-tags` | | Only include specified tags (comma-separated) |
-| `--exclude-tags` | | Exclude specified tags (comma-separated) |
-| `--exclude-paths` | | Exclude paths matching prefixes (comma-separated) |
-| `--exclude-deprecated` | | Exclude deprecated operations |
-| `--group-by` | `-g` | How to group operations: `tags`, `path`, or `auto` (default: `auto`) |
-| `--case-strategy` | | Strategy for case-insensitive filesystem safety: `lowercase` |
-| `--templates` | `-t` | Custom templates directory |
-| `--force` | `-f` | Overwrite existing output directory |
-| `--quiet` | `-q` | Suppress output except errors |
+| Option                 | Alias | Description                                                          |
+| ---------------------- | ----- | -------------------------------------------------------------------- |
+| `--output`             | `-o`  | Output directory (default: `./output`)                               |
+| `--name`               | `-n`  | Skill name (default: derived from API title)                         |
+| `--include-tags`       |       | Only include specified tags (comma-separated)                        |
+| `--exclude-tags`       |       | Exclude specified tags (comma-separated)                             |
+| `--exclude-paths`      |       | Exclude paths matching prefixes (comma-separated)                    |
+| `--exclude-deprecated` |       | Exclude deprecated operations                                        |
+| `--group-by`           | `-g`  | How to group operations: `tags`, `path`, or `auto` (default: `auto`) |
+| `--case-strategy`      |       | Strategy for case-insensitive filesystem safety: `lowercase`         |
+| `--templates`          | `-t`  | Custom templates directory                                           |
+| `--force`              | `-f`  | Overwrite existing output directory                                  |
+| `--quiet`              | `-q`  | Suppress output except errors                                        |
 
 ### Case-Insensitive Filesystem Safety
 
@@ -82,16 +96,18 @@ npx openapi-to-skills ./bundled.yaml -o ./output
 The package exports `convertOpenAPIToSkill` for integration into build pipelines or custom tooling:
 
 ```typescript
-import { convertOpenAPIToSkill } from 'openapi-to-skills';
+import { convertOpenAPIToSkill } from "openapi-to-skills";
 
-const spec = { /* OpenAPI spec object */ };
+const spec = {
+  /* OpenAPI spec object */
+};
 
 await convertOpenAPIToSkill(spec, {
-  outputDir: './output',
+  outputDir: "./output",
   parser: {
-    skillName: 'my-api',
+    skillName: "my-api",
     filter: {
-      includeTags: ['users', 'orders'],
+      includeTags: ["users", "orders"],
       excludeDeprecated: true,
     },
   },
@@ -110,12 +126,12 @@ See [examples/](./examples) for a simple demo with the classic Petstore spec (3 
 
 [public-api-skills](https://github.com/Yuyz0112/public-api-skills) demonstrates real-world usage across a large collection of public APIs:
 
-| Metric | Original | Agent Skills |
-|--------|----------|--------------|
-| Source | 1 file (7.2 MB) | 2,135 files |
-| Resources | - | 77 index files |
-| Operations | 588 (all in one) | 588 individual files |
-| Schemas | 1,315 (all in one) | 1,468 individual files |
+| Metric     | Original           | Agent Skills           |
+| ---------- | ------------------ | ---------------------- |
+| Source     | 1 file (7.2 MB)    | 2,135 files            |
+| Resources  | -                  | 77 index files         |
+| Operations | 588 (all in one)   | 588 individual files   |
+| Schemas    | 1,315 (all in one) | 1,468 individual files |
 
 A 7.2 MB monolithic spec becomes 2,135 focused files that agents can navigate on-demand.
 

@@ -23,5 +23,5 @@ Get user detail based on username.
 
 **Success Response Schema:**
 
-[User](../schemas/User/User.md)
+[View](../schemas/User/User.md)
 

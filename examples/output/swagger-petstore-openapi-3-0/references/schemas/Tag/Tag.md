@@ -9,3 +9,13 @@
 | `id` | integer (int64) | No |  |
 | `name` | string | No |  |
 
+
+## Example
+
+```json
+{
+  "id": 0,
+  "name": "string"
+}
+```
+

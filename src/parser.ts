@@ -43,7 +43,10 @@ type HttpMethod = (typeof HTTP_METHODS)[number];
 // =============================================================================
 
 export class Parser {
+	private schemas?: Record<string, SchemaObject | ReferenceObject>;
+
 	parse(spec: OpenAPISpec, options: ParserOptions = {}): SkillDocument {
+		this.schemas = spec.components?.schemas ?? {};
 		const filter = options.filter ?? {};
 		const groupBy = options.groupBy ?? "auto";
 
@@ -59,6 +62,8 @@ export class Parser {
 		// Parse auth schemes
 		const authSchemes = this.parseAuthSchemes(spec);
 
+		this.schemas = undefined;
+
 		return {
 			meta,
 			resources,
@@ -68,10 +73,7 @@ export class Parser {
 	}
 
 	private parseMeta(spec: OpenAPISpec, skillName?: string): SkillMeta {
-		const description =
-			typeof spec.info.description === "string"
-				? (spec.info.description.split("\n")[0]?.substring(0, 200) ?? "")
-				: "";
+		const description = spec.info.description ?? "";
 
 		return {
 			name: skillName ?? this.toSkillName(spec.info.title),
@@ -344,9 +346,12 @@ export class Parser {
 		};
 
 		if (schemaType === "object" && schema.properties) {
-			doc.fields = this.parseFields(schema);
+			doc.fields = this.parseFields(schema, new Set<string>());
+			doc.example = this.generateExample(schema, new Set<string>());
 		} else if (schemaType === "enum" && schema.enum) {
 			doc.enumValues = schema.enum;
+		} else if (schemaType === "array" && "items" in schema && schema.items) {
+			doc.items = this.parseSchemaRef(schema.items);
 		} else if (
 			schemaType === "allOf" ||
 			schemaType === "oneOf" ||
@@ -354,14 +359,15 @@ export class Parser {
 		) {
 			const composite = schema.allOf ?? schema.oneOf ?? schema.anyOf;
 			doc.composition = composite?.map((item) => this.parseSchemaRef(item));
-		} else if (schemaType === "array" && "items" in schema && schema.items) {
-			doc.items = this.parseSchemaRef(schema.items);
 		}
 
 		return doc;
 	}
 
-	private parseFields(schema: SchemaObject): FieldDocument[] {
+	private parseFields(
+		schema: SchemaObject,
+		visited: Set<string>,
+	): FieldDocument[] {
 		const required = new Set(schema.required ?? []);
 		const fields: FieldDocument[] = [];
 
@@ -369,7 +375,7 @@ export class Parser {
 			schema.properties ?? {},
 		)) {
 			fields.push(
-				this.parseField(propName, propSchema, required.has(propName)),
+				this.parseField(propName, propSchema, required.has(propName), visited),
 			);
 		}
 
@@ -380,6 +386,7 @@ export class Parser {
 		name: string,
 		schema: SchemaObject | ReferenceObject,
 		isRequired: boolean,
+		visited: Set<string>,
 	): FieldDocument {
 		const field: FieldDocument = {
 			name,
@@ -389,29 +396,156 @@ export class Parser {
 
 		if (isReferenceObject(schema)) {
 			field.schema = { ref: this.getRefName(schema.$ref) };
+			// Resolve $ref to show nested fields inline
+			if (this.schemas && visited.size < 3) {
+				const refName = this.getRefName(schema.$ref);
+				if (!visited.has(refName)) {
+					const resolved = this.schemas[refName];
+					if (
+						resolved &&
+						!isReferenceObject(resolved) &&
+						resolved.type === "object" &&
+						resolved.properties
+					) {
+						const nestedVisited = new Set(visited);
+						nestedVisited.add(refName);
+						field.nestedFields = this.parseFields(resolved, nestedVisited);
+					}
+				}
+			}
 		} else {
 			field.description = schema.description;
 
 			// Handle nested inline objects
 			if (schema.type === "object" && schema.properties) {
-				field.nestedFields = this.parseFields(schema);
+				field.nestedFields = this.parseFields(schema, visited);
 			}
 
-			// Handle array of inline objects
-			if (
-				schema.type === "array" &&
-				"items" in schema &&
-				schema.items &&
-				!isReferenceObject(schema.items)
-			) {
-				const items = schema.items as SchemaObject;
-				if (items.type === "object" && items.properties) {
-					field.nestedFields = this.parseFields(items);
+			// Handle array of inline objects or $ref items
+			if (schema.type === "array" && "items" in schema && schema.items) {
+				if (isReferenceObject(schema.items)) {
+					const refName = this.getRefName(schema.items.$ref);
+					if (this.schemas && visited.size < 3 && !visited.has(refName)) {
+						const resolved = this.schemas[refName];
+						if (
+							resolved &&
+							!isReferenceObject(resolved) &&
+							resolved.type === "object" &&
+							resolved.properties
+						) {
+							const nestedVisited = new Set(visited);
+							nestedVisited.add(refName);
+							field.nestedFields = this.parseFields(resolved, nestedVisited);
+						}
+					}
+				} else {
+					const items = schema.items as SchemaObject;
+					if (items.type === "object" && items.properties) {
+						field.nestedFields = this.parseFields(items, visited);
+					}
+				}
+			}
+
+			// Handle allOf/oneOf/anyOf composition in fields
+			const composite = schema.allOf ?? schema.oneOf ?? schema.anyOf;
+			if (composite) {
+				const refItem = composite.find((item) => isReferenceObject(item));
+				if (refItem && isReferenceObject(refItem)) {
+					const refName = this.getRefName(refItem.$ref);
+					field.schema = { ref: refName };
+					if (this.schemas && visited.size < 3 && !visited.has(refName)) {
+						const resolved = this.schemas[refName];
+						if (
+							resolved &&
+							!isReferenceObject(resolved) &&
+							resolved.properties
+						) {
+							const nestedVisited = new Set(visited);
+							nestedVisited.add(refName);
+							field.nestedFields = this.parseFields(resolved, nestedVisited);
+						}
+					}
 				}
 			}
 		}
 
 		return field;
+	}
+
+	private generateExample(schema: SchemaObject, visited: Set<string>): unknown {
+		if (schema.properties) {
+			const obj: Record<string, unknown> = {};
+			for (const [propName, propSchema] of Object.entries(schema.properties)) {
+				obj[propName] = this.generateFieldExample(propSchema, visited);
+			}
+			return obj;
+		}
+		return {};
+	}
+
+	private generateFieldExample(
+		schema: SchemaObject | ReferenceObject,
+		visited: Set<string>,
+	): unknown {
+		if (isReferenceObject(schema)) {
+			const refName = this.getRefName(schema.$ref);
+			if (visited.has(refName)) return { "…": "circular" };
+			if (this.schemas) {
+				const resolved = this.schemas[refName];
+				if (resolved && !isReferenceObject(resolved)) {
+					visited.add(refName);
+					return this.generateExample(resolved, visited);
+				}
+			}
+			return {};
+		}
+
+		if (schema.example !== undefined) return schema.example;
+
+		const examples = (schema as Record<string, unknown>).examples;
+		if (Array.isArray(examples) && examples.length > 0) return examples[0];
+
+		if (schema.enum && schema.enum.length > 0) return schema.enum[0];
+
+		// Handle allOf/oneOf/anyOf composition
+		const composite = schema.allOf ?? schema.oneOf ?? schema.anyOf;
+		if (composite) {
+			const refItem = composite.find((item) => isReferenceObject(item));
+			if (refItem && isReferenceObject(refItem)) {
+				const refName = this.getRefName(refItem.$ref);
+				if (!visited.has(refName) && this.schemas) {
+					const resolved = this.schemas[refName];
+					if (resolved && !isReferenceObject(resolved)) {
+						visited.add(refName);
+						return this.generateExample(resolved, visited);
+					}
+				}
+			}
+			return {};
+		}
+
+		switch (schema.type) {
+			case "string":
+				return schema.format === "date-time"
+					? "2019-08-24T14:15:22Z"
+					: "string";
+			case "integer":
+				return 0;
+			case "number":
+				return 0.0;
+			case "boolean":
+				return true;
+			case "array":
+				if (schema.items) {
+					const itemExample = this.generateFieldExample(schema.items, visited);
+					return [itemExample];
+				}
+				return [];
+			case "object":
+				return this.generateExample(schema, visited);
+			default:
+				return "";
+		}
 	}
 
 	private parseSchemaRef(
@@ -559,6 +693,15 @@ export class Parser {
 				return `${this.getRefName(s.items.$ref)}[]`;
 			}
 			return `${(s.items as SchemaObject).type ?? "any"}[]`;
+		}
+
+		// Handle allOf/oneOf/anyOf at field level
+		const composite = s.allOf ?? s.oneOf ?? s.anyOf;
+		if (composite) {
+			const refItem = composite.find((item) => isReferenceObject(item));
+			if (refItem && isReferenceObject(refItem)) {
+				return this.getRefName(refItem.$ref);
+			}
 		}
 
 		let type = s.type ?? "any";

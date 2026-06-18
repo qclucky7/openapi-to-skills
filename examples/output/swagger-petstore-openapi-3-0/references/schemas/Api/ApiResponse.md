@@ -10,3 +10,14 @@
 | `type` | string | No |  |
 | `message` | string | No |  |
 
+
+## Example
+
+```json
+{
+  "code": 0,
+  "type": "string",
+  "message": "string"
+}
+```
+

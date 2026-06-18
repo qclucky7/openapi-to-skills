@@ -17,6 +17,15 @@
 | `path` | string | Yes | Directory path relative to the FS root |
 | `recursive` | boolean | No | Create parent directories as needed |
 
+**Example:**
+
+```json
+{
+  "path": "string",
+  "recursive": true
+}
+```
+
 ## Responses
 
 | Status | Description |
@@ -28,4 +37,12 @@
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `success` | boolean | No | Whether the directory was created |
+
+**Example:**
+
+```json
+{
+  "success": true
+}
+```
 

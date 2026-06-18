@@ -6,5 +6,26 @@
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `alerts` | Alert[] | No |  |
+| `alerts` | object[] | No |  |
+
+## Nested Fields
+
+### `alerts`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `state` | string | No |  |
+
+
+## Example
+
+```json
+{
+  "alerts": [
+    {
+      "state": "string"
+    }
+  ]
+}
+```
 

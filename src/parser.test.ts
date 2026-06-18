@@ -366,6 +366,127 @@ describe("Parser.parse - schemas", () => {
 			"city",
 		]);
 	});
+
+	test("resolves allOf $ref fields into nestedFields", () => {
+		const spec = createMinimalSpec({
+			components: {
+				schemas: {
+					"models.Options": {
+						type: "object",
+						properties: {
+							ua: { type: "string", example: "Mozilla/5.0" },
+							resolution: { type: "string", example: "1920x1080" },
+						},
+					},
+					"models.Environment": {
+						type: "object",
+						properties: {
+							name: { type: "string", examples: ["test-env"] },
+							options: {
+								description: "browser configuration options",
+								allOf: [
+									{
+										$ref: "#/components/schemas/models.Options",
+									},
+								],
+							},
+						},
+					},
+				},
+			},
+		});
+
+		const doc = parser.parse(spec);
+		const schema = doc.schemaGroups
+			.flatMap((g) => g.schemas)
+			.find((s) => s.name === "models.Environment");
+		const optionsField = schema?.fields?.find((f) => f.name === "options");
+
+		expect(optionsField?.schema?.ref).toBe("models.Options");
+		expect(optionsField?.nestedFields).toHaveLength(2);
+		expect(optionsField?.nestedFields?.map((f) => f.name)).toEqual([
+			"ua",
+			"resolution",
+		]);
+	});
+
+	test("generates example using examples (plural) array", () => {
+		const spec = createMinimalSpec({
+			components: {
+				schemas: {
+					Browser: {
+						type: "object",
+						properties: {
+							name: {
+								type: "string",
+								examples: ["Hello,Clonbrowser"],
+							},
+							kernel_version: {
+								type: "integer",
+								examples: [147],
+							},
+							default_urls: {
+								type: "array",
+								items: { type: "string" },
+								examples: [["www.example.com"]],
+							},
+						},
+					},
+				},
+			},
+		});
+
+		const doc = parser.parse(spec);
+		const schema = doc.schemaGroups[0]?.schemas[0];
+		const example = schema?.example as Record<string, unknown>;
+
+		expect(example?.name).toBe("Hello,Clonbrowser");
+		expect(example?.kernel_version).toBe(147);
+		expect(example?.default_urls).toEqual(["www.example.com"]);
+	});
+
+	test("generates example for allOf fields", () => {
+		const spec = createMinimalSpec({
+			components: {
+				schemas: {
+					"models.Fingerprint": {
+						type: "object",
+						properties: {
+							browser: { type: "string", example: "chrome" },
+							version: { type: "integer", example: 120 },
+						},
+					},
+					"models.Environment": {
+						type: "object",
+						properties: {
+							name: { type: "string", example: "test" },
+							fingerprint: {
+								allOf: [
+									{
+										$ref: "#/components/schemas/models.Fingerprint",
+									},
+								],
+							},
+						},
+					},
+				},
+			},
+		});
+
+		const doc = parser.parse(spec);
+		const schema = doc.schemaGroups
+			.flatMap((g) => g.schemas)
+			.find((s) => s.name === "models.Environment");
+		const example = schema?.example as Record<string, unknown>;
+
+		expect(example?.name).toBe("test");
+		expect((example?.fingerprint as Record<string, unknown>)?.browser).toBe(
+			"chrome",
+		);
+		expect((example?.fingerprint as Record<string, unknown>)?.version).toBe(
+			120,
+		);
+	});
 });
 
 // =============================================================================

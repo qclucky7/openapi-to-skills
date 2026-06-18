@@ -23,5 +23,5 @@ For valid response try integer IDs with value <= 5 or > 10. Other values will ge
 
 **Success Response Schema:**
 
-[Order](../schemas/Order/Order.md)
+[View](../schemas/Order/Order.md)
 

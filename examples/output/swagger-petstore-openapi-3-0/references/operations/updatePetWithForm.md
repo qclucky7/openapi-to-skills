@@ -24,7 +24,7 @@ Updates a pet resource based on the form data.
 
 **Success Response Schema:**
 
-[Pet](../schemas/Pet/Pet.md)
+[View](../schemas/Pet/Pet.md)
 
 ## Security
 

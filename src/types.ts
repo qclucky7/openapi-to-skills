@@ -101,6 +101,7 @@ export interface SchemaDocument {
 	enumValues?: unknown[];
 	composition?: SchemaRefDocument[];
 	items?: SchemaRefDocument;
+	example?: unknown;
 }
 
 export interface FieldDocument {

@@ -50,5 +50,5 @@ Supported methods: <%= it.meta.securitySchemes.map(s => `**${s}**`).join(", ") %
 ## Resources
 
 <% it.resources.forEach(resource => { -%>
-- **<%= resource.tag %>** → `references/resources/<%= it.toFileName(resource.tag) %>.md` (<%= resource.operations.length %> ops)<%= resource.description ? ` - ${resource.description.substring(0, 50)}` : "" %>
+- **<%= resource.tag %>** → `references/resources/<%= it.toFileName(resource.tag) %>.md` (<%= resource.operations.length %> ops)<%= resource.description ? ` - ${resource.description}` : "" %>
 <% }) -%>

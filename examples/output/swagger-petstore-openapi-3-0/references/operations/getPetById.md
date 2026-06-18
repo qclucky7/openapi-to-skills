@@ -23,7 +23,7 @@ Returns a single pet.
 
 **Success Response Schema:**
 
-[Pet](../schemas/Pet/Pet.md)
+[View](../schemas/Pet/Pet.md)
 
 ## Security
 

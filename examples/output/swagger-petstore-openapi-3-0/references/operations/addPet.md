@@ -12,7 +12,7 @@ Create a new pet in the store
 
 **Content Types:** `application/json`, `application/xml`, `application/x-www-form-urlencoded`
 
-**Schema:** [Pet](../schemas/Pet/Pet.md)
+**Schema:** [View](../schemas/Pet/Pet.md)
 
 ## Responses
 
@@ -25,7 +25,7 @@ Create a new pet in the store
 
 **Success Response Schema:**
 
-[Pet](../schemas/Pet/Pet.md)
+[View](../schemas/Pet/Pet.md)
 
 ## Security
 

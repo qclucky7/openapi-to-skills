@@ -15,3 +15,19 @@
 | `phone` | string | No |  |
 | `userStatus` | integer (int32) | No | User Status |
 
+
+## Example
+
+```json
+{
+  "id": 10,
+  "username": "theUser",
+  "firstName": "John",
+  "lastName": "James",
+  "email": "john@email.com",
+  "password": "12345",
+  "phone": "12345",
+  "userStatus": 1
+}
+```
+

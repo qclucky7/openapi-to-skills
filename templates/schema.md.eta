@@ -13,7 +13,7 @@
 |-------|------|----------|-------------|
 <% it.fields.forEach(field => { -%>
 <% let type = field.type; -%>
-<% if (field.schema?.ref) { type = `[${field.schema.ref}](${it.toFileName(field.schema.ref)}.md)`; } -%>
+<% if (field.nestedFields) { type = field.type.endsWith("[]") ? "object[]" : "object"; } else if (field.schema?.ref) { type = `[${field.schema.ref}](${it.toFileName(field.schema.ref)}.md)`; } -%>
 | `<%= field.name %>` | <%= type %> | <%= field.required ? "Yes" : "No" %> | <%= field.description ?? "" %> |
 <% }) -%>
 
@@ -28,7 +28,7 @@
 |-------|------|----------|-------------|
 <% field.nestedFields.forEach(nested => { -%>
 <% let type = nested.type; -%>
-<% if (nested.schema?.ref) { type = `[${nested.schema.ref}](${it.toFileName(nested.schema.ref)}.md)`; } -%>
+<% if (nested.nestedFields) { type = nested.type.endsWith("[]") ? "object[]" : "object"; } else if (nested.schema?.ref) { type = `[${nested.schema.ref}](${it.toFileName(nested.schema.ref)}.md)`; } -%>
 | `<%= nested.name %>` | <%= type %> | <%= nested.required ? "Yes" : "No" %> | <%= nested.description ?? "" %> |
 <% }) -%>
 
@@ -39,7 +39,7 @@
 |-------|------|----------|-------------|
 <% nested.nestedFields.forEach(deep => { -%>
 <% let type = deep.type; -%>
-<% if (deep.schema?.ref) { type = `[${deep.schema.ref}](${it.toFileName(deep.schema.ref)}.md)`; } -%>
+<% if (deep.nestedFields) { type = deep.type.endsWith("[]") ? "object[]" : "object"; } else if (deep.schema?.ref) { type = `[${deep.schema.ref}](${it.toFileName(deep.schema.ref)}.md)`; } -%>
 | `<%= deep.name %>` | <%= type %> | <%= deep.required ? "Yes" : "No" %> | <%= deep.description ?? "" %> |
 <% }) -%>
 
@@ -68,4 +68,13 @@ Array of [<%= it.items.ref %>](<%= it.toFileName(it.items.ref) %>.md)
 <% } else { -%>
 Array of object
 <% } -%>
+<% } -%>
+
+<% if (it.example !== undefined) { -%>
+## Example
+
+```json
+<%~ JSON.stringify(it.example, null, 2) %>
+```
+
 <% } -%>

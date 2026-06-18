@@ -1,6 +1,13 @@
 ---
 name: swagger-petstore-openapi-3-0
-description: This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  You can find out more about. Use when working with the Swagger Petstore - OpenAPI 3.0 or when the user needs to interact with this API.
+description: This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  You can find out more about
+Swagger at [https://swagger.io](https://swagger.io). In the third iteration of the pet store, we've switched to the design first approach!
+You can now help us improve the API whether it's by making changes to the definition itself or to the code.
+That way, with time, we can improve the API in general, and expose some of the new features in OAS3.
+
+Some useful links:
+- [The Pet Store repository](https://github.com/swagger-api/swagger-petstore)
+- [The source API definition for the Pet Store](https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml). Use when working with the Swagger Petstore - OpenAPI 3.0 or when the user needs to interact with this API.
 license: Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0.html)
 metadata:
   api-version: "1.0.27"
@@ -11,6 +18,13 @@ metadata:
 # Swagger Petstore - OpenAPI 3.0
 
 This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  You can find out more about
+Swagger at [https://swagger.io](https://swagger.io). In the third iteration of the pet store, we've switched to the design first approach!
+You can now help us improve the API whether it's by making changes to the definition itself or to the code.
+That way, with time, we can improve the API in general, and expose some of the new features in OAS3.
+
+Some useful links:
+- [The Pet Store repository](https://github.com/swagger-api/swagger-petstore)
+- [The source API definition for the Pet Store](https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml)
 
 ## How to Use This Skill
 

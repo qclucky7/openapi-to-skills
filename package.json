@@ -21,7 +21,7 @@
 		"LICENSE"
 	],
 	"scripts": {
-		"build": "rm -rf dist && tsc && cp -r templates dist/",
+		"build": "bun run scripts/build.ts",
 		"dev": "bun run src/cli.ts",
 		"test": "bun test",
 		"snapshot:update": "bun run scripts/update-snapshots.ts",

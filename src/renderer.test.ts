@@ -203,6 +203,48 @@ describe("TemplateRenderer - authentication", () => {
 });
 
 // =============================================================================
+// TemplateRenderer - schema field defaults
+// =============================================================================
+
+describe("TemplateRenderer - schema field defaults", () => {
+	test("renders default values by field type", () => {
+		const renderer = createRenderer();
+		const result = renderer.renderSchema({
+			name: "BrowserSettings",
+			type: "object",
+			fields: [
+				{
+					name: "enable_browser_workbench_page",
+					type: "boolean",
+					required: false,
+					defaultValue: true,
+					description:
+						"After turning it on, The browser will display the workbench page",
+				},
+				{ name: "kernel_version", type: "integer", required: false, defaultValue: 147 },
+				{ name: "name", type: "string", required: false, defaultValue: "Chrome" },
+				{
+					name: "default_urls",
+					type: "string[]",
+					required: false,
+					defaultValue: ["www.example.com"],
+				},
+			],
+		});
+
+		expect(result).toContain("| Field | Type | Required | Default | Description |");
+		expect(result).toContain(
+			"| `enable_browser_workbench_page` | boolean | No | `true` | After turning it on, The browser will display the workbench page |",
+		);
+		expect(result).toContain("| `kernel_version` | integer | No | `147` |  |");
+		expect(result).toContain("| `name` | string | No | `Chrome` |  |");
+		expect(result).toContain(
+			"| `default_urls` | string[] | No | `[\"www.example.com\"]` |  |",
+		);
+	});
+});
+
+// =============================================================================
 // TemplateRenderer - operation inline schemas (regression: inline bodies/
 // responses were silently dropped because only schema.ref was rendered)
 // =============================================================================
@@ -234,6 +276,7 @@ describe("TemplateRenderer - operation inline schemas", () => {
 								name: "path",
 								type: "string",
 								required: true,
+								defaultValue: "/tmp",
 								description: "Directory path to create",
 							},
 						],
@@ -245,9 +288,9 @@ describe("TemplateRenderer - operation inline schemas", () => {
 
 		expect(result).toContain("## Request Body");
 		expect(result).toContain("**Schema** (inline):");
-		expect(result).toContain("| Field | Type | Required | Description |");
+		expect(result).toContain("| Field | Type | Required | Default | Description |");
 		expect(result).toContain(
-			"| `path` | string | Yes | Directory path to create |",
+			"| `path` | string | Yes | `/tmp` | Directory path to create |",
 		);
 	});
 
@@ -271,7 +314,7 @@ describe("TemplateRenderer - operation inline schemas", () => {
 		});
 
 		expect(result).toContain("**Success Response Schema** (inline):");
-		expect(result).toContain("| `ok` | boolean | Yes |  |");
+		expect(result).toContain("| `ok` | boolean | Yes |  |  |");
 	});
 
 	test("links inline field that references a named schema", () => {

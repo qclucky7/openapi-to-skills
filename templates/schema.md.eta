@@ -1,4 +1,13 @@
 # <%= it.name %>
+<%
+function formatDefaultValue(field) {
+	if (field.defaultValue === undefined) return "";
+	const value = field.defaultValue;
+	if (field.type === "string" || field.type.includes("date")) return `\`${String(value)}\``;
+	if (field.type === "integer" || field.type === "number" || field.type === "boolean") return `\`${String(value)}\``;
+	return `\`${JSON.stringify(value)}\``;
+}
+-%>
 
 <% if (it.description) { -%>
 <%= it.description %>
@@ -9,12 +18,13 @@
 <% if (it.type === "object" && it.fields) { -%>
 ## Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
 <% it.fields.forEach(field => { -%>
 <% let type = field.type; -%>
 <% if (field.nestedFields) { type = field.type.endsWith("[]") ? "object[]" : "object"; } else if (field.schema?.ref) { type = `[${field.schema.ref}](${it.toFileName(field.schema.ref)}.md)`; } -%>
-| `<%= field.name %>` | <%= type %> | <%= field.required ? "Yes" : "No" %> | <%= field.description ?? "" %> |
+<% const defaultValue = formatDefaultValue(field); -%>
+| `<%= field.name %>` | <%= type %> | <%= field.required ? "Yes" : "No" %> | <%= defaultValue %> | <%= field.description ?? "" %> |
 <% }) -%>
 
 <% const nestedFields = it.fields.filter(f => f.nestedFields); -%>
@@ -24,23 +34,25 @@
 <% nestedFields.forEach(field => { -%>
 ### `<%= field.name %>`
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
 <% field.nestedFields.forEach(nested => { -%>
 <% let type = nested.type; -%>
 <% if (nested.nestedFields) { type = nested.type.endsWith("[]") ? "object[]" : "object"; } else if (nested.schema?.ref) { type = `[${nested.schema.ref}](${it.toFileName(nested.schema.ref)}.md)`; } -%>
-| `<%= nested.name %>` | <%= type %> | <%= nested.required ? "Yes" : "No" %> | <%= nested.description ?? "" %> |
+<% const defaultValue = formatDefaultValue(nested); -%>
+| `<%= nested.name %>` | <%= type %> | <%= nested.required ? "Yes" : "No" %> | <%= defaultValue %> | <%= nested.description ?? "" %> |
 <% }) -%>
 
 <% field.nestedFields.filter(n => n.nestedFields).forEach(nested => { -%>
 #### `<%= field.name %>.<%= nested.name %>`
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
 <% nested.nestedFields.forEach(deep => { -%>
 <% let type = deep.type; -%>
 <% if (deep.nestedFields) { type = deep.type.endsWith("[]") ? "object[]" : "object"; } else if (deep.schema?.ref) { type = `[${deep.schema.ref}](${it.toFileName(deep.schema.ref)}.md)`; } -%>
-| `<%= deep.name %>` | <%= type %> | <%= deep.required ? "Yes" : "No" %> | <%= deep.description ?? "" %> |
+<% const defaultValue = formatDefaultValue(deep); -%>
+| `<%= deep.name %>` | <%= type %> | <%= deep.required ? "Yes" : "No" %> | <%= defaultValue %> | <%= deep.description ?? "" %> |
 <% }) -%>
 
 <% }) -%>

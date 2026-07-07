@@ -39,7 +39,7 @@ describe("Parser.parse - meta", () => {
 		expect(doc.meta.title).toBe("My API");
 		expect(doc.meta.version).toBe("2.0.0");
 		expect(doc.meta.openapiVersion).toBe("3.0.0");
-		expect(doc.meta.description).toBe("A test API"); // first line only
+		expect(doc.meta.description).toBe("A test API\nWith multiple lines");
 	});
 
 	test("generates skill name from title", () => {
@@ -443,6 +443,42 @@ describe("Parser.parse - schemas", () => {
 		expect(example?.name).toBe("Hello,Clonbrowser");
 		expect(example?.kernel_version).toBe(147);
 		expect(example?.default_urls).toEqual(["www.example.com"]);
+	});
+
+	test("parses field default values from default, example, and examples", () => {
+		const spec = createMinimalSpec({
+			components: {
+				schemas: {
+					BrowserSettings: {
+						type: "object",
+						properties: {
+							enable_browser_workbench_page: {
+								description:
+									"After turning it on, The browser will display the workbench page",
+								type: "boolean",
+								examples: [true],
+							},
+							kernel_version: { type: "integer", example: 147 },
+							name: { type: "string", default: "Chrome" },
+						},
+					},
+				},
+			},
+		});
+
+		const doc = parser.parse(spec);
+		const fields = doc.schemaGroups[0]?.schemas[0]?.fields;
+
+		expect(
+			fields?.find((f) => f.name === "enable_browser_workbench_page")
+				?.defaultValue,
+		).toBe(true);
+		expect(fields?.find((f) => f.name === "kernel_version")?.defaultValue).toBe(
+			147,
+		);
+		expect(fields?.find((f) => f.name === "name")?.defaultValue).toBe(
+			"Chrome",
+		);
 	});
 
 	test("generates example for allOf fields", () => {

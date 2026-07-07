@@ -14,20 +14,30 @@ function _typeCell(field) {
 	}
 	return field.type;
 }
+function _defaultCell(field) {
+	if (field.defaultValue === undefined) return "";
+	const value = field.defaultValue;
+	if (field.type === "string" || field.type.includes("date")) return `\`${String(value)}\``;
+	if (field.type === "integer" || field.type === "number" || field.type === "boolean") return `\`${String(value)}\``;
+	return `\`${JSON.stringify(value)}\``;
+}
 function _fieldRows(fields) {
 	return fields
-		.map((f) => `| \`${f.name}\` | ${_typeCell(f)} | ${f.required ? "Yes" : "No"} | ${f.description ?? ""} |`)
+		.map((f) => {
+			const defaultValue = _defaultCell(f);
+			return `| \`${f.name}\` | ${_typeCell(f)} | ${f.required ? "Yes" : "No"} | ${defaultValue} | ${f.description ?? ""} |`;
+		})
 		.join("\n");
 }
 function renderInlineSchema(s) {
 	if (!s) return "";
 	if (s.type === "object" && s.fields && s.fields.length) {
 		let out =
-			"| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n" +
+			"| Field | Type | Required | Default | Description |\n|-------|------|----------|---------|-------------|\n" +
 			_fieldRows(s.fields);
 		for (const f of s.fields.filter((f) => f.nestedFields && f.nestedFields.length)) {
 			out +=
-				`\n\n**\`${f.name}\` fields:**\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n` +
+				`\n\n**\`${f.name}\` fields:**\n\n| Field | Type | Required | Default | Description |\n|-------|------|----------|---------|-------------|\n` +
 				_fieldRows(f.nestedFields);
 		}
 		if (s.example !== undefined) {

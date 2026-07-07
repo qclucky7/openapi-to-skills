@@ -415,6 +415,8 @@ export class Parser {
 			}
 		} else {
 			field.description = schema.description;
+			const defaultValue = this.getFieldDefaultValue(schema);
+			if (defaultValue !== undefined) field.defaultValue = defaultValue;
 
 			// Handle nested inline objects
 			if (schema.type === "object" && schema.properties) {
@@ -470,6 +472,18 @@ export class Parser {
 		}
 
 		return field;
+	}
+
+	private getFieldDefaultValue(schema: SchemaObject): unknown {
+		const schemaRecord = schema as Record<string, unknown>;
+
+		if (schemaRecord.default !== undefined) return schemaRecord.default;
+		if (schema.example !== undefined) return schema.example;
+
+		const examples = schemaRecord.examples;
+		if (Array.isArray(examples) && examples.length > 0) return examples[0];
+
+		return undefined;
 	}
 
 	private generateExample(schema: SchemaObject, visited: Set<string>): unknown {

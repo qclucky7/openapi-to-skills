@@ -109,6 +109,7 @@ export interface FieldDocument {
 	type: string;
 	required: boolean;
 	description?: string;
+	defaultValue?: unknown;
 	schema?: SchemaRefDocument;
 	nestedFields?: FieldDocument[];
 }
